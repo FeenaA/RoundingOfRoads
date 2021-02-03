@@ -26,7 +26,7 @@ public class Demonstration : MonoBehaviour
         meshRenderer.material = material;
     }
 
-    private void OnDrawGizmos()
+    /*private void OnDrawGizmos()
     {
         if (mesh != null)
         {
@@ -35,5 +35,5 @@ public class Demonstration : MonoBehaviour
                 Gizmos.DrawSphere(mesh.vertices[i], 0.5f);
             }
         }
-    }
+    }*/
 }
