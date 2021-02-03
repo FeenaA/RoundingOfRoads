@@ -1,9 +1,9 @@
 using UnityEngine;
 
-public class Line
+public struct Line
 {
-    private float _k = 0f;
-    private float _b = 0f;
+    private float _k;
+    private float _b;
 
     public float k
     {
@@ -20,8 +20,8 @@ public class Line
     public Vector3 point1;
     public Vector3 point2;
 
-    private Vector3 _point1 = new Vector3(0f, 0f, 0f);
-    private Vector3 _point2 = new Vector3(0f, 0f, 0f);
+    private Vector3 _point1;
+    private Vector3 _point2;
 
     /// <summary>
     /// constructor: standart form
@@ -30,15 +30,21 @@ public class Line
     /// <param name="b"></param>
     public Line(float k, float b)
     {
+        point1 = Vector3.zero;
+        point2 = Vector3.zero;
+
+        _point1 = Vector3.zero;
+        _point2 = Vector3.zero;
+
         _k = k;
         _b = b;
 
         // GetTwoPointsForm();
     }
 
-    public Line() : this(0f, 0f)
-    {
-    }
+    //public Line() : this(0f, 0f)
+    //{
+    //}
 
     /// <summary>
     /// constructor: two-points form
@@ -47,6 +53,12 @@ public class Line
     /// <param name="point2"></param>
     public Line(Vector3 point1, Vector3 point2)
     {
+        this.point1 = Vector3.zero;
+        this.point2 = Vector3.zero;
+
+        _k = 0f;
+        _b = 0f;
+
         _point1 = point1;
         _point2 = point2;
 
@@ -59,7 +71,18 @@ public class Line
         _b = point2.z - point2.x * _k;
     }
 
-    /// <summary>
+    /*public Vector3 Rotate(float radius, float angle, Vector3 center)
+    {
+        Vector3 point = new Vector3
+        {
+            x = radius * Mathf.Sin(angle * Mathf.Deg2Rad),
+            z = radius * Mathf.Cos(angle * Mathf.Deg2Rad)
+        };
+
+        return center + point;
+    }*/
+
+  /*  /// <summary>
     /// поворот прямой на угол angle
     /// </summary>
     /// <param name="angle">угол в градусах</param>
@@ -68,18 +91,18 @@ public class Line
     {
         Line line = new Line( this._point1, this._point2); 
 
-        float angleRad = angleDegrees * Mathf.PI / 180;
+        float angleRad = - angleDegrees * Mathf.Deg2Rad;
         float sin = Mathf.Sin(angleRad), cos = Mathf.Cos(angleRad);
 
-        line.point1.x = line._point1.x * cos - line._point1.z * sin;
-        line.point1.z = line._point1.x * sin + line._point1.y * cos;
+
+
 
         line.point2.x = line._point2.x * cos - line._point2.z * sin;
-        line.point2.z = line._point2.x * sin + line._point2.y * cos;
+        line.point2.z = line._point2.x * sin + line._point2.z * cos;
 
         line._point1 = line.point1;
         line._point2 = line.point2;
 
         return line;
-    }
+    }*/
 }

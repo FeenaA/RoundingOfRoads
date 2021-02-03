@@ -14,8 +14,11 @@ public class MeshGenerator
     // малый радиус скруглени€
     // --- радиус рассчитывать
     private readonly float radius = 3f;
-    // --- количество треугольников рассчитывать
-    private readonly int count = 5;
+
+    /// <summary>
+    /// количество промежуточных точек на скруглении
+    /// </summary>
+    private readonly int count = 10;// --- количество треугольников рассчитывать
 
     private Vector3[] _vertices;
     private int[] _triangles;
@@ -30,7 +33,7 @@ public class MeshGenerator
     /// </summary>
     public Mesh GetMesh()
     {
-        CalculateSize();
+        GenerateVerticesTriangles();
 
         Mesh mesh = new Mesh
         {
@@ -43,15 +46,9 @@ public class MeshGenerator
     }
 
     /// <summary>
-    /// рассчет ...
+    /// генератор вершин и индексов
     /// </summary>
-    private void CalculateSize()
-    {
-        _vertices = GenerateVertices();
-        _triangles = GenerateTriangles();
-    }
-
-    private Vector3[] GenerateVertices()
+    private void GenerateVerticesTriangles()
     {
         _vertices = new Vector3[ (4 + count) * 2];
 
@@ -60,7 +57,7 @@ public class MeshGenerator
         GetRoundedSection(ref currentNum);
         GetStraightSection(point2, ref currentNum, ref roundnessPoint2, ref RoundnessPoint2);
 
-        return _vertices;
+        GenerateTriangles();
     }
 
     /// <summary>
@@ -74,11 +71,12 @@ public class MeshGenerator
 
         int currentIndex = 0;
         int v = 0;
-        for (int i = 0; i < guardCount; i++)
+        for (int i = 0; i < guardCount - 1; i++)
         {
             GetGuard(ref currentIndex, v, v + 1, v + 2, v + 3);
             v += 2;
         }
+        GetGuard(ref currentIndex, v, v, v, v);
 
         return _triangles;
     }
@@ -110,56 +108,42 @@ public class MeshGenerator
         _vertices[currentNum++] = RoundnessPoint;
     }
 
-
-
     private void GetRoundedSection(ref int currentNum)
     {
-        Line line1 = new Line();
-        Line line2 = new Line();
-
         float roadWidthHalf = roadWidth / 2f;
 
         // --- проверка направлени€ нормалей
+
         float width = roadWidthHalf + radius;
-        GetLine(point1, pointCentre, width, ref line1);
-        GetLine(pointCentre, point2, width, ref line2);
+        GetLine(point1, pointCentre, width, out var line1);
+        GetLine(pointCentre, point2, width, out var line2);
 
         Vector3 crossingPoint = GetCrossingPoint(line1, line2);
          
-        float angleRoads = Vector3.Angle(point1 - pointCentre, pointCentre - point2);
+        float angleRoads = Vector3.Angle(pointCentre - point2, point1 - pointCentre);
         float deltaAngle = (180f - angleRoads) / (count + 1);
 
+        float angleX = Vector3.Angle(Vector3.left, crossingPoint - roundnessPoint1);
 
-        Line line = new Line(crossingPoint, roundnessPoint1);
+        var x = Rotate(radius, angleX - 180f, crossingPoint);
 
-        for (int i = 0; i < count; i++)
+        for (int i = 1; i <= count; i++)
         {
-            line.Rotate(deltaAngle);
-
-            // рассчет точки на малом радиусе и внесение еЄ в массив вершин
-
-            // рассчет точки на большом радиусе и внесение еЄ в массив вершин
-
-            //_vertices[currentNum++] = point - normal;
-            int x = 5;
-
+            _vertices[currentNum++] = Rotate(radius, angleX - 180f + i * deltaAngle, crossingPoint);
+            _vertices[currentNum++] = Rotate(radius + roadWidth, angleX - 180f + i * deltaAngle, crossingPoint);
         }
     }
 
-    /*Line line3 = new Line();
-Line line4 = new Line();
-GetLine(point1, pointCentre, roadWidthHalf, ref line3);
-GetLine(pointCentre, point2, roadWidthHalf, ref line4);
+    private static Vector3 Rotate(float radius, float angle, Vector3 center)
+    {
+        Vector3 point = new Vector3
+        {
+            x = radius * Mathf.Sin(angle * Mathf.Deg2Rad),
+            z = radius * Mathf.Cos(angle * Mathf.Deg2Rad)
+        };
 
-// перпендикул€ры из centralPoint к каждой новой пр€мой
-Line line3_perpend = new Line();
-Line line4_perpend = new Line();
-GetPerpendicular(centralPoint, line3, ref line3_perpend);
-GetPerpendicular(centralPoint, line4, ref line4_perpend);
-
-Vector3 roundnessPoint1 = GetCrossingPoint(line3, line3_perpend);
-Vector3 roundnessPoint2 = GetCrossingPoint(line4, line4_perpend);*/
-
+        return center + point;
+    }
 
     /// <summary>
     /// заполнение индексов дл€ треугольников
@@ -180,7 +164,7 @@ Vector3 roundnessPoint2 = GetCrossingPoint(line4, line4_perpend);*/
         _triangles[currentIndex++] = v10;
     }
 
-    /// <summary>
+/*    /// <summary>
     /// построить пр€мую, перпендикул€рную данной и проход€щую черз точку
     /// </summary>
     /// <param name="point">точка, через которую проходит перпендикул€р</param>
@@ -190,7 +174,7 @@ Vector3 roundnessPoint2 = GetCrossingPoint(line4, line4_perpend);*/
     {
         linePerpendicular.k = -1f / line.k;
         linePerpendicular.b = point.x / line.k + point.z;
-    }
+    }*/
 
     /// <summary>
     /// найти точку пересечени€ пр€мых 1) y = a*x + c, 2) y = b*x + d
@@ -218,7 +202,7 @@ Vector3 roundnessPoint2 = GetCrossingPoint(line4, line4_perpend);*/
     /// <param name="width">distance</param>
     /// <param name="k"></param>
     /// <param name="b"></param>
-    private Vector3 GetLine(Vector3 point1, Vector3 point2, float width, ref Line line) 
+    private Vector3 GetLine(Vector3 point1, Vector3 point2, float width, out Line line) 
     { 
         Vector3 road = new Vector3(point2.x - point1.x, point2.y - point1.y, point2.z - point1.z);
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
@@ -226,23 +210,8 @@ Vector3 roundnessPoint2 = GetCrossingPoint(line4, line4_perpend);*/
         Vector3 point3 = point1 + normal * width;
         Vector3 point4 = point2 + normal * width;
 
-        //LineStandartForm(point3, point4, ref line);
-
         line = new Line(point3, point4);
 
         return normal;
     }
-
-/*    /// <summary>
-    /// привести уравнение пр€мой к стандартной форме
-    /// </summary>
-    /// <param name="point1">point on line</param>
-    /// <param name="point2">point on line</param>
-    /// <param name="k">koefficient of line</param>
-    /// <param name="b">koefficient of line</param>
-    private void LineStandartForm(Vector3 point1, Vector3 point2, ref Line line)
-    {
-        line.k = (point1.z - point2.z) / (point1.x - point2.x);
-        line.b = point2.z - point2.x * line.k;
-    }*/
 }
