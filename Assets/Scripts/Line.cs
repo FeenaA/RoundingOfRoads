@@ -70,39 +70,4 @@ public struct Line
         _k = (point1.z - point2.z) / (point1.x - point2.x);
         _b = point2.z - point2.x * _k;
     }
-
-    /*public Vector3 Rotate(float radius, float angle, Vector3 center)
-    {
-        Vector3 point = new Vector3
-        {
-            x = radius * Mathf.Sin(angle * Mathf.Deg2Rad),
-            z = radius * Mathf.Cos(angle * Mathf.Deg2Rad)
-        };
-
-        return center + point;
-    }*/
-
-  /*  /// <summary>
-    /// поворот прямой на угол angle
-    /// </summary>
-    /// <param name="angle">угол в градусах</param>
-    /// <returns></returns>
-    public Line Rotate( float angleDegrees )
-    {
-        Line line = new Line( this._point1, this._point2); 
-
-        float angleRad = - angleDegrees * Mathf.Deg2Rad;
-        float sin = Mathf.Sin(angleRad), cos = Mathf.Cos(angleRad);
-
-
-
-
-        line.point2.x = line._point2.x * cos - line._point2.z * sin;
-        line.point2.z = line._point2.x * sin + line._point2.z * cos;
-
-        line._point1 = line.point1;
-        line._point2 = line.point2;
-
-        return line;
-    }*/
 }

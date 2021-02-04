@@ -14,16 +14,16 @@ public class MeshGenerator
     //Vector3 point2 = new Vector3(5, 0, -8);
 
     // тупой угол
-    Vector3 point1 = new Vector3(-15, 0, -8);
-    Vector3 point2 = new Vector3(15, 0, -8);
+    Vector3 point1 = new Vector3(-9, 0, -5);
+    Vector3 point2 = new Vector3(9, 0, -5);
 
     // ширина дорог
     // --- предусмотреть случай разных размеров
-    private readonly float roadWidth = 5f;
+    private readonly float roadWidth = 3f;
 
     // малый радиус скругления
     // --- радиус рассчитывать
-    private readonly float radius = 5f;
+    private readonly float radius = 3f;
 
     /// <summary>
     /// количество промежуточных точек на скруглении
@@ -76,31 +76,12 @@ public class MeshGenerator
         // получить точки скругления
         GetRoundedPoints();
 
-        // заполнить mesh
-        GetRoundedSection();
-       
-    }
-
-    /// <summary>
-    /// получить точки начала скругления
-    /// </summary>
-    private void GetRoundedPoints()
-    {
-        Vector3 road = point1 - pointCentre; 
-        Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
-        roundnessPoint = crossingPoint + normal * radius;
-        RoundnessPoint = crossingPoint + normal * (radius + roadWidth);
-    }
-
-
-    private void GetRoundedSection()
-    {
         float roadWidthHalf = roadWidth / 2f;
 
         // --- проверка направления нормалей
 
         int currentVertic = 0;
-        
+
         // получить точки первого края дороги
         GetStraightVertices(point1, false, ref currentVertic);
 
@@ -110,10 +91,10 @@ public class MeshGenerator
         float angleX = Vector3.Angle(Vector3.left, crossingPoint - roundnessPoint);
 
         // построить скругленный участок
-        for (int i = 0; i <= count; i++) 
+        for (int i = 0; i <= count; i++)
         {
             _vertices[currentVertic++] = Rotate(radius, angleX - 180f + i * deltaAngle, crossingPoint);
-            _vertices[currentVertic++] = Rotate(radius + roadWidth, angleX - 180f + i * deltaAngle, crossingPoint); 
+            _vertices[currentVertic++] = Rotate(radius + roadWidth, angleX - 180f + i * deltaAngle, crossingPoint);
 
             GetGuard(currentVertic - 4, currentVertic - 3, currentVertic - 2, currentVertic - 1);
         }
@@ -121,8 +102,40 @@ public class MeshGenerator
         GetStraightVertices(point2, true, ref currentVertic);
 
         GetGuard(currentVertic - 4, currentVertic - 3, currentVertic - 2, currentVertic - 1);
+
     }
 
+    /// <summary>
+    /// получить точки начала скругления
+    /// </summary>
+    private void GetRoundedPoints()
+    {
+        // вариант для прямого угла
+                Vector3 road = point1 - pointCentre; 
+                Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
+                roundnessPoint = crossingPoint + normal * radius;
+                RoundnessPoint = crossingPoint + normal * (radius + roadWidth); 
+
+
+       /* // вариант для тупого угла
+        GetLine(point1, pointCentre, roadWidth / 2, out var line1);
+        GetLine(pointCentre, point2, radius + roadWidth/2, out var line2);
+        roundnessPoint = GetCrossingPoint(line1, line2);
+
+
+        Vector3 road = point1 - pointCentre;
+        Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
+        
+        RoundnessPoint = roundnessPoint + normal*roadWidth;
+
+        // определить новую crossing point
+        Line lineNormal = new Line(RoundnessPoint, roundnessPoint);
+        Line lineCentral = new Line(pointCentre, crossingPoint); // частный случай - деление на нуль
+        crossingPoint = GetCrossingPoint(lineNormal, lineCentral);
+
+        // определить для неё новый радиус
+        int x = 5;*/
+    }
 
     /// <summary>
     /// вершины на прямых участках дорог
