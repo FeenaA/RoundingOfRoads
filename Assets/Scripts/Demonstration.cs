@@ -11,14 +11,22 @@ public class Demonstration : MonoBehaviour
     void Start()
     {
         GameObject road = new GameObject("MyRoad");
-
-        // MeshFilter 
         var meshFilter = road.AddComponent<MeshFilter>();
-        //meshFilter.sharedMesh = new Mesh();
+
+        // input data
+        Vector3 pointCentre = new Vector3(0, 0, 0);
+
+        //Vector3 point1 = new Vector3(-8, 0, -8);
+        //Vector3 point2 = new Vector3(8, 0, -8);
+
+        Vector3 point1 = new Vector3(-8, 0, 0);
+        Vector3 point2 = new Vector3(8, 0, 0);
+
+
 
         // use mesh
         MeshGenerator meshGenerator = new MeshGenerator();
-        mesh = meshGenerator.GetMesh();
+        mesh = meshGenerator.GetMesh(pointCentre, point1, point2);
         meshFilter.sharedMesh = mesh;
 
         // MeshRenderer

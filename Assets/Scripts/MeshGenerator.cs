@@ -1,50 +1,43 @@
 using UnityEngine;
 
-public class MeshGenerator 
+public class MeshGenerator
 {
-    // input data
-    Vector3 pointCentre = new Vector3(0, 0, 0);
+    // базовые точки
+    private Vector3 _pointCentre;
+    private Vector3 _point1;
+    private Vector3 _point2;
 
-    //// прямой угол
-    //Vector3 point1 = new Vector3(-8, 0, -8);
-    //Vector3 point2 = new Vector3(8, 0, -8);
-
-    //// острый угол
-    //Vector3 point1 = new Vector3(-5, 0, -8);
-    //Vector3 point2 = new Vector3(5, 0, -8);
-
-    // тупой угол
-    Vector3 point1 = new Vector3(-9, 0, -5);
-    Vector3 point2 = new Vector3(9, 0, -5);
-
-    // ширина дорог
-    // --- предусмотреть случай разных размеров
+    /// <summary>
+    /// ширина дорог
+    /// </summary>
     private readonly float roadWidth = 3f;
 
-    // малый радиус скругления
-    // --- радиус рассчитывать
-    private readonly float radius = 3f;
+    /// <summary>
+    /// малый радиус скругления
+    /// </summary>
+    private readonly float radius = 1f;
 
     /// <summary>
     /// количество промежуточных точек на скруглении
     /// </summary>
-    private readonly int count = 5;// --- количество треугольников рассчитывать
+    private readonly int count = 5;
 
     private Vector3[] _vertices;
     private int[] _triangles;
-     
+
     private Vector3 roundnessPoint;
-    private Vector3 RoundnessPoint;  
-
     private int currentIndex = 0;
-
     private Vector3 crossingPoint;
 
     /// <summary>
     /// создать и заполнить mesh
     /// </summary>
-    public Mesh GetMesh()
+    public Mesh GetMesh( Vector3 pointCentre, Vector3 point1, Vector3 point2)
     {
+        _pointCentre = pointCentre;
+        _point1 = point1;
+        _point2 = point2;
+
         GenerateVerticesTriangles();
 
         Mesh mesh = new Mesh
@@ -62,47 +55,45 @@ public class MeshGenerator
     /// </summary>
     private void GenerateVerticesTriangles()
     {
-        _vertices = new Vector3[ (4 + count) * 2];
+        _vertices = new Vector3[(4 + count) * 2];
 
         int guardCount = 2 + 1 + count;
         _triangles = new int[guardCount * 2 * 3];
 
         // получить центр окружностей
         float width = roadWidth / 2f + radius;
-        GetLine(point1, pointCentre, width, out var line1);
-        GetLine(pointCentre, point2, width, out var line2);
+        GetLine(_point1, _pointCentre, width, out var line1);
+        GetLine(_pointCentre, _point2, width, out var line2);
         crossingPoint = GetCrossingPoint(line1, line2);
 
         // получить точки скругления
         GetRoundedPoints();
-
-        float roadWidthHalf = roadWidth / 2f;
 
         // --- проверка направления нормалей
 
         int currentVertic = 0;
 
         // получить точки первого края дороги
-        GetStraightVertices(point1, false, ref currentVertic);
+        GetStraightVertices(_point1, false, ref currentVertic);
 
-        float angleRoads = Vector3.Angle(pointCentre - point2, point1 - pointCentre);
-        float deltaAngle = (180f - angleRoads) / count;
+        float angleRoads = Vector3.Angle(crossingPoint - roundnessPoint, crossingPoint - _pointCentre) * 2f;
+        float deltaAngle = angleRoads / count;
 
-        float angleX = Vector3.Angle(Vector3.left, crossingPoint - roundnessPoint);
+        //float angleX = Vector3.Angle(Vector3.left, crossingPoint - roundnessPoint) - 180f;
+        float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;
 
         // построить скругленный участок
         for (int i = 0; i <= count; i++)
         {
-            _vertices[currentVertic++] = Rotate(radius, angleX - 180f + i * deltaAngle, crossingPoint);
-            _vertices[currentVertic++] = Rotate(radius + roadWidth, angleX - 180f + i * deltaAngle, crossingPoint);
+            _vertices[currentVertic++] = Rotate(radius, angleX + i * deltaAngle, crossingPoint);
+            _vertices[currentVertic++] = Rotate(radius + roadWidth, angleX + i * deltaAngle, crossingPoint);
 
             GetGuard(currentVertic - 4, currentVertic - 3, currentVertic - 2, currentVertic - 1);
         }
         // получить точки второго края дороги
-        GetStraightVertices(point2, true, ref currentVertic);
+        GetStraightVertices(_point2, true, ref currentVertic);
 
         GetGuard(currentVertic - 4, currentVertic - 3, currentVertic - 2, currentVertic - 1);
-
     }
 
     /// <summary>
@@ -111,30 +102,9 @@ public class MeshGenerator
     private void GetRoundedPoints()
     {
         // вариант для прямого угла
-                Vector3 road = point1 - pointCentre; 
-                Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
-                roundnessPoint = crossingPoint + normal * radius;
-                RoundnessPoint = crossingPoint + normal * (radius + roadWidth); 
-
-
-       /* // вариант для тупого угла
-        GetLine(point1, pointCentre, roadWidth / 2, out var line1);
-        GetLine(pointCentre, point2, radius + roadWidth/2, out var line2);
-        roundnessPoint = GetCrossingPoint(line1, line2);
-
-
-        Vector3 road = point1 - pointCentre;
+        Vector3 road = _point1 - _pointCentre;
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
-        
-        RoundnessPoint = roundnessPoint + normal*roadWidth;
-
-        // определить новую crossing point
-        Line lineNormal = new Line(RoundnessPoint, roundnessPoint);
-        Line lineCentral = new Line(pointCentre, crossingPoint); // частный случай - деление на нуль
-        crossingPoint = GetCrossingPoint(lineNormal, lineCentral);
-
-        // определить для неё новый радиус
-        int x = 5;*/
+        roundnessPoint = crossingPoint + normal * radius;
     }
 
     /// <summary>
@@ -148,11 +118,11 @@ public class MeshGenerator
     {
         float halfRoadWidth = roadWidth / 2f;
 
-        Vector3 road = point - pointCentre;
+        Vector3 road = point - _pointCentre;
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized * halfRoadWidth;
 
         Vector3 vertic1 = point - normal;
-        Vector3 vertic2 = point + normal; 
+        Vector3 vertic2 = point + normal;
 
         if (!isInverted)
         {
@@ -165,7 +135,6 @@ public class MeshGenerator
             _vertices[currentVertic++] = vertic1;
         }
     }
-
 
     /// <summary>
     /// поворот вектора
@@ -193,7 +162,7 @@ public class MeshGenerator
     /// <param name="v01">индекс левой верхней вершины</param>
     /// <param name="v10">индекс правой нижней вершины</param>
     /// <param name="v11">индекс правой верхней вершины</param>
-    private void GetGuard(int v00, int v01, int v10, int v11 )
+    private void GetGuard(int v00, int v01, int v10, int v11)
     {
         _triangles[currentIndex++] = v00;
         _triangles[currentIndex++] = v01;
@@ -212,14 +181,30 @@ public class MeshGenerator
     /// <param name="b"></param>
     /// <param name="d"></param>
     /// <returns>точка пересечения</returns>
-    private Vector3 GetCrossingPoint(Line line1, Line line2) 
+    private Vector3 GetCrossingPoint(Line line1, Line line2)
     {
         float k1 = line1.k;
-        float b1 = line1.b;
-        float k2 = line2.k; 
-        float b2 = line2.b;
+        float b1 = line1.bb;
+        float k2 = line2.k;
+        float b2 = line2.bb;
 
-        return new Vector3( (b2 - b1)/(k1 - k2), 0, (k1 * b2 - k2 * b1) /(k1 - k2) );
+        return new Vector3((b2 - b1) / (k1 - k2), 0, (k1 * b2 - k2 * b1) / (k1 - k2));
+
+        /*if (line1.a == 0f)
+        {
+            var temp = line1;
+            line1 = line2;
+            line2 = temp;
+        }
+
+        var res = new Vector3
+        {
+            z = (line1.a * line2.c - line2.a * line1.c) / (line1.a * line2.b - line2.a * line1.b),
+        };
+
+        res.x = (line1.c - res.y * line1.b) / line1.a;
+
+        return res;*/
     }
 
     /// <summary>
@@ -230,8 +215,8 @@ public class MeshGenerator
     /// <param name="width">distance</param>
     /// <param name="k"></param>
     /// <param name="b"></param>
-    private Vector3 GetLine(Vector3 point1, Vector3 point2, float width, out Line line) 
-    { 
+    private Vector3 GetLine(Vector3 point1, Vector3 point2, float width, out Line line)
+    {
         Vector3 road = new Vector3(point2.x - point1.x, point2.y - point1.y, point2.z - point1.z);
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
 
