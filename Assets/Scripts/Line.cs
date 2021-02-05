@@ -2,9 +2,18 @@ using UnityEngine;
 
 public struct Line
 {
-    // --- todelete
     private float _k;
     private float _bb;
+
+    public Vector3 point1;
+    public Vector3 point2;
+
+    private Vector3 _point1;
+    private Vector3 _point2;
+
+    private float _a;
+    private float _b;
+    private float _c;
 
     public float k
     {
@@ -17,38 +26,24 @@ public struct Line
         get { return _bb; }
         set { _bb = value; }
     }
-    // ---
 
-
-
-
-    private float _a;
-    private float _b; 
-    private float _c;
     public float a
     {
         get { return _a; }
         set { _a = value; }
     }
+
     public float b
     {
         get { return _b; }
         set { _b = value; }
     }
+
     public float c
     {
         get { return _c; }
         set { _c = value; } 
     }
-
-
-
-
-    public Vector3 point1;
-    public Vector3 point2;
-
-    private Vector3 _point1;
-    private Vector3 _point2;
 
     /// <summary>
     /// constructor: standart form
@@ -71,8 +66,6 @@ public struct Line
         // GetTwoPointsForm();
     }
 
-
-    
     /// <summary>
     /// constructor: two-points form
     /// </summary>
@@ -100,14 +93,14 @@ public struct Line
         _bb = point2.z - point2.x * _k;
 
         // Я
-        /*_a = point2.x - point1.x;
+        _a = point2.x - point1.x;
         _b = point1.z - point2.z;
-        _c = - point1.z * _a - point1.x * _b;*/
+        _c = - point1.z * _a - point1.x * _b;
 
         // Даниил
-        _a = point2.z - point1.z;
+        /*_a = point2.z - point1.z;
         _b = point1.x - point2.x;  
-        _c = point1.x * point2.z - point2.x * point1.z;
+        _c = point1.x * point2.z - point2.x * point1.z;*/
 
     }
 }

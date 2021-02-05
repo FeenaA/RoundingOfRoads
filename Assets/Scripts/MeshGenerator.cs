@@ -10,7 +10,7 @@ public class MeshGenerator
     /// <summary>
     /// ширина дорог
     /// </summary>
-    private readonly float roadWidth = 3f;
+    private readonly float roadWidth = 2f;
 
     /// <summary>
     /// малый радиус скругления
@@ -20,7 +20,7 @@ public class MeshGenerator
     /// <summary>
     /// количество промежуточных точек на скруглении
     /// </summary>
-    private readonly int count = 5;
+    private int _count = 5;
 
     private Vector3[] _vertices;
     private int[] _triangles;
@@ -28,6 +28,7 @@ public class MeshGenerator
     private Vector3 roundnessPoint;
     private int currentIndex = 0;
     private Vector3 crossingPoint;
+    private bool isCrossingPointValid;
 
     /// <summary>
     /// создать и заполнить mesh
@@ -55,35 +56,75 @@ public class MeshGenerator
     /// </summary>
     private void GenerateVerticesTriangles()
     {
-        _vertices = new Vector3[(4 + count) * 2];
-
-        int guardCount = 2 + 1 + count;
-        _triangles = new int[guardCount * 2 * 3];
-
         // получить центр окружностей
-        float width = roadWidth / 2f + radius;
-        GetLine(_point1, _pointCentre, width, out var line1);
-        GetLine(_pointCentre, _point2, width, out var line2);
-        crossingPoint = GetCrossingPoint(line1, line2);
+        GetCrossingPoint();
 
-        // получить точки скругления
-        GetRoundedPoints();
+        // выделить память для вершин и индексов
+        AllocateMemory();
+        
+        // получить точку скругления
+        GetRoundnessPoint();
 
-        // --- проверка направления нормалей
+        // --- проверка направления нормалей - для случая вывернутого угла
 
+        // заполнить массивы вершин и индексов
+        FillVerticesTriangles();
+    }
+
+    /// <summary>
+    /// заполнить массивы вершин и индексов
+    /// </summary>
+    private void FillVerticesTriangles()
+    {
         int currentVertic = 0;
 
         // получить точки первого края дороги
         GetStraightVertices(_point1, false, ref currentVertic);
+          
+        // определить сектор поворота
+        Vector3 vectorStart = roundnessPoint - crossingPoint;
+        Vector3 mediana = _pointCentre - crossingPoint;
+        float angleRoads = Vector3.Angle(vectorStart, mediana) * 2f;
 
-        float angleRoads = Vector3.Angle(crossingPoint - roundnessPoint, crossingPoint - _pointCentre) * 2f;
-        float deltaAngle = angleRoads / count;
+        // определить направление
+        //float pseudoScalarProduct = mediana.x * vectorStart.z - mediana.z * vectorStart.x;
+        float pseudoScalarProduct = mediana.z * vectorStart.x - mediana.x * vectorStart.z;
+        int sign = (pseudoScalarProduct > 0) ? -1 : 1;
+        float deltaAngle = sign * angleRoads / _count;
 
-        //float angleX = Vector3.Angle(Vector3.left, crossingPoint - roundnessPoint) - 180f;
-        float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;
+        float shift;
+        Vector3 road1 = _point1 - _pointCentre;
+        if (road1.x < 0)
+        {
+            if (road1.z < 0)
+            {
+                shift = -90f;
+            }
+            else
+            {
+                shift = 180f;
+            }
+        }
+        else
+        {
+            if (road1.z < 0)
+            {
+                shift = -90f;
+            }
+            else
+            {
+                shift = 180f;
+            }
+        }
+
+        float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) + shift;
+
+        //float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;//+
+
 
         // построить скругленный участок
-        for (int i = 0; i <= count; i++)
+        int currentCount = (angleX == 0) ? 0 : _count;
+        for (int i = 0; i <= currentCount; i++)
         {
             _vertices[currentVertic++] = Rotate(radius, angleX + i * deltaAngle, crossingPoint);
             _vertices[currentVertic++] = Rotate(radius + roadWidth, angleX + i * deltaAngle, crossingPoint);
@@ -97,11 +138,35 @@ public class MeshGenerator
     }
 
     /// <summary>
+    /// выделить память для вершин и индексов
+    /// </summary>
+    private void AllocateMemory()
+    {
+        int verticesCount;
+        int guardCount;
+
+        if (isCrossingPointValid)
+        {
+            // прямые под углом
+            verticesCount = (4 + _count) * 2;
+            guardCount = 2 + 1 + _count;
+        }
+        else
+        {
+            // угол вырожден
+            verticesCount = 3 * 2;
+            guardCount = 2;
+        }
+
+        _vertices = new Vector3[verticesCount];
+        _triangles = new int[guardCount * 2 * 3];
+    }
+
+    /// <summary>
     /// получить точки начала скругления
     /// </summary>
-    private void GetRoundedPoints()
+    private void GetRoundnessPoint()
     {
-        // вариант для прямого угла
         Vector3 road = _point1 - _pointCentre;
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
         roundnessPoint = crossingPoint + normal * radius;
@@ -181,30 +246,65 @@ public class MeshGenerator
     /// <param name="b"></param>
     /// <param name="d"></param>
     /// <returns>точка пересечения</returns>
-    private Vector3 GetCrossingPoint(Line line1, Line line2)
+    private void GetCrossingPoint()
     {
-        float k1 = line1.k;
-        float b1 = line1.bb;
-        float k2 = line2.k;
-        float b2 = line2.bb;
+        // вектора дорог исходят из общей точки
+        Vector3 road1 = _point1 - _pointCentre; 
+        Vector3 road2 = _point2 - _pointCentre;
 
-        return new Vector3((b2 - b1) / (k1 - k2), 0, (k1 * b2 - k2 * b1) / (k1 - k2));
+        // псевдоскалярное произведение - по формуле определителя
+        float pseudoScalarProduct = road1.x * road2.z - road1.z * road2.x;
 
-        /*if (line1.a == 0f)
+        bool isDirectionReversed = pseudoScalarProduct < 0 ;
+        float width = roadWidth / 2f + radius;
+
+        GetLine(_point1, _pointCentre, width, out var line1, isDirectionReversed);
+        GetLine(_pointCentre, _point2, width, out var line2, isDirectionReversed);
+
+        // swap roads
+        if (isDirectionReversed)
         {
-            var temp = line1;
-            line1 = line2;
-            line2 = temp;
+            SwapRoads(ref line1, ref line2);
         }
 
-        var res = new Vector3
+        float k1 = line1.k;
+        float k2 = line2.k;
+
+        // case of parallel lines
+        if ( k1 == k2 )
         {
-            z = (line1.a * line2.c - line2.a * line1.c) / (line1.a * line2.b - line2.a * line1.b),
-        };
+            Vector3 road = _pointCentre - _point1;
+            Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
+            crossingPoint = _pointCentre + normal * width;
 
-        res.x = (line1.c - res.y * line1.b) / line1.a;
+            isCrossingPointValid = false;
+            return;
+        }
 
-        return res;*/
+        // not parallel lines
+        float b1 = line1.bb;
+        float b2 = line2.bb;
+
+        crossingPoint = new Vector3(
+            (b2 - b1) / (k1 - k2), 
+            0, 
+            (k1 * b2 - k2 * b1) / (k1 - k2));
+
+        isCrossingPointValid = true;
+    }
+
+    /// <summary>
+    /// переназначить дороги
+    /// </summary>
+    private void SwapRoads(ref Line line1, ref Line line2)
+    { 
+        Line tempLine = line1;
+        line1 = line2;
+        line2 = tempLine;
+
+        Vector3 tempPoint = _point1;
+        _point1 = _point2;
+        _point2 = tempPoint;
     }
 
     /// <summary>
@@ -215,13 +315,19 @@ public class MeshGenerator
     /// <param name="width">distance</param>
     /// <param name="k"></param>
     /// <param name="b"></param>
-    private Vector3 GetLine(Vector3 point1, Vector3 point2, float width, out Line line)
+    private Vector3 GetLine(Vector3 point1, Vector3 point2, float width, out Line line, bool isDirectionReversed)
     {
         Vector3 road = new Vector3(point2.x - point1.x, point2.y - point1.y, point2.z - point1.z);
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
 
-        Vector3 point3 = point1 + normal * width;
-        Vector3 point4 = point2 + normal * width;
+        int sign = 1;
+        if ( isDirectionReversed )
+        {
+            sign = -1;
+        }
+
+        Vector3 point3 = point1 + sign * normal * width;
+        Vector3 point4 = point2 + sign * normal * width;
 
         line = new Line(point3, point4);
 

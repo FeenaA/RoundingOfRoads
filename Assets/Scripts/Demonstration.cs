@@ -6,42 +6,52 @@ public class Demonstration : MonoBehaviour
 {
     public Material material;
 
+    public GameObject spherePrefab;
+
     private Mesh mesh;
 
-    void Start()
+    public GameObject clickedSphere;
+
+    private MeshFilter roadMeshFilter;
+
+    private SphereMovement _sphereCenter;
+    private SphereMovement _sphere1;
+    private SphereMovement _sphere2;
+
+    void Awake()
     {
+        // spheres
+        GameObject sphereCentre = Instantiate(spherePrefab);
+        sphereCentre.transform.position = new Vector3(-5f, 0f, 0f);
+        _sphereCenter = sphereCentre.GetComponent<SphereMovement>();
+        _sphereCenter.PositionChanged += OnSpherePositionChanged;
+
+        GameObject spherePoint1 = Instantiate(spherePrefab);
+        spherePoint1.transform.position = new Vector3(5f, 0f, -10f);
+        _sphere1 = spherePoint1.GetComponent<SphereMovement>();
+        _sphere1.PositionChanged += OnSpherePositionChanged;
+
+        GameObject spherePoint2 = Instantiate(spherePrefab);
+        spherePoint2.transform.position = new Vector3(10f, 0f, 5f);
+        _sphere2 = spherePoint2.GetComponent<SphereMovement>();
+        _sphere2.PositionChanged += OnSpherePositionChanged;
+
+        // mesh
         GameObject road = new GameObject("MyRoad");
-        var meshFilter = road.AddComponent<MeshFilter>();
+        roadMeshFilter = road.AddComponent<MeshFilter>();
 
-        // input data
-        Vector3 pointCentre = new Vector3(0, 0, 0);
-
-        //Vector3 point1 = new Vector3(-8, 0, -8);
-        //Vector3 point2 = new Vector3(8, 0, -8);
-
-        Vector3 point1 = new Vector3(-8, 0, 0);
-        Vector3 point2 = new Vector3(8, 0, 0);
-
-
-
-        // use mesh
         MeshGenerator meshGenerator = new MeshGenerator();
-        mesh = meshGenerator.GetMesh(pointCentre, point1, point2);
-        meshFilter.sharedMesh = mesh;
+        mesh = meshGenerator.GetMesh(_sphereCenter.transform.position, _sphere1.transform.position, _sphere2.transform.position);
+        roadMeshFilter.sharedMesh = mesh;
 
-        // MeshRenderer
         var meshRenderer = road.AddComponent<MeshRenderer>();
         meshRenderer.material = material;
     }
 
-    /*private void OnDrawGizmos()
+    private void OnSpherePositionChanged()
     {
-        if (mesh != null)
-        {
-            for (int i = 4; i < mesh.vertices.Length - 4; ++i)
-            {
-                Gizmos.DrawSphere(mesh.vertices[i], 0.5f);
-            }
-        }
-    }*/
+        MeshGenerator meshGenerator = new MeshGenerator();
+        mesh = meshGenerator.GetMesh(_sphereCenter.transform.position, _sphere1.transform.position, _sphere2.transform.position);
+        roadMeshFilter.sharedMesh = mesh;
+    }
 }
