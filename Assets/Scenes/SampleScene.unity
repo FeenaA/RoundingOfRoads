@@ -361,6 +361,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: ce388d2c8ec8d644b90ea7b7b05199c3, type: 2}
+  materialSphere1: {fileID: 2100000, guid: eddad445aafd8cc43a903ed4ae5e434b, type: 2}
   spherePrefab: {fileID: 3549269543754128552, guid: b5c2f209a9b8694418786c7846c5ad29, type: 3}
   clickedSphere: {fileID: 0}
 --- !u!4 &691486517

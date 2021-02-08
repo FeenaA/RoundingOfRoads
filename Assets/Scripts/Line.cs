@@ -84,23 +84,27 @@ public struct Line
         _point1 = point1;
         _point2 = point2;
 
-        Get—anonicalForm(_point1, _point2);
+        GetGeneralForm(_point1, _point2);
     }
 
-    public void Get—anonicalForm(Vector3 point1, Vector3 point2)
+    public void GetGeneralForm(Vector3 point1, Vector3 point2)
     {
         _k = (point1.z - point2.z) / (point1.x - point2.x);
         _bb = point2.z - point2.x * _k;
 
         // ﬂ
-        _a = point2.x - point1.x;
+        /*_a = point2.x - point1.x;
         _b = point1.z - point2.z;
-        _c = - point1.z * _a - point1.x * _b;
+        _c = - point1.z * _a - point1.x * _b;*/
 
         // ƒ‡ÌËËÎ
         /*_a = point2.z - point1.z;
         _b = point1.x - point2.x;  
         _c = point1.x * point2.z - point2.x * point1.z;*/
+
+        _a = point1.z - point2.z;
+        _b = point2.x - point1.x;
+        _c = point1.x * point2.z - point2.x * point1.z;
 
     }
 }

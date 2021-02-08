@@ -33,7 +33,7 @@ public class MeshGenerator
     /// <summary>
     /// создать и заполнить mesh
     /// </summary>
-    public Mesh GetMesh( Vector3 pointCentre, Vector3 point1, Vector3 point2)
+    public Mesh GetMesh(Vector3 pointCentre, Vector3 point1, Vector3 point2)
     {
         _pointCentre = pointCentre;
         _point1 = point1;
@@ -61,7 +61,7 @@ public class MeshGenerator
 
         // выделить память для вершин и индексов
         AllocateMemory();
-        
+
         // получить точку скругления
         GetRoundnessPoint();
 
@@ -80,47 +80,14 @@ public class MeshGenerator
 
         // получить точки первого края дороги
         GetStraightVertices(_point1, false, ref currentVertic);
-          
+
         // определить сектор поворота
         Vector3 vectorStart = roundnessPoint - crossingPoint;
         Vector3 mediana = _pointCentre - crossingPoint;
         float angleRoads = Vector3.Angle(vectorStart, mediana) * 2f;
 
-        // определить направление
-        //float pseudoScalarProduct = mediana.x * vectorStart.z - mediana.z * vectorStart.x;
-        float pseudoScalarProduct = mediana.z * vectorStart.x - mediana.x * vectorStart.z;
-        int sign = (pseudoScalarProduct > 0) ? -1 : 1;
-        float deltaAngle = sign * angleRoads / _count;
-
-        float shift;
-        Vector3 road1 = _point1 - _pointCentre;
-        if (road1.x < 0)
-        {
-            if (road1.z < 0)
-            {
-                shift = -90f;
-            }
-            else
-            {
-                shift = 180f;
-            }
-        }
-        else
-        {
-            if (road1.z < 0)
-            {
-                shift = -90f;
-            }
-            else
-            {
-                shift = 180f;
-            }
-        }
-
-        float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) + shift;
-
-        //float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;//+
-
+        float deltaAngle = angleRoads / _count;
+        float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;
 
         // построить скругленный участок
         int currentCount = (angleX == 0) ? 0 : _count;
@@ -248,16 +215,9 @@ public class MeshGenerator
     /// <returns>точка пересечения</returns>
     private void GetCrossingPoint()
     {
-        // вектора дорог исходят из общей точки
-        Vector3 road1 = _point1 - _pointCentre; 
-        Vector3 road2 = _point2 - _pointCentre;
+        bool isDirectionReversed = DetectDirection();
 
-        // псевдоскалярное произведение - по формуле определителя
-        float pseudoScalarProduct = road1.x * road2.z - road1.z * road2.x;
-
-        bool isDirectionReversed = pseudoScalarProduct < 0 ;
         float width = roadWidth / 2f + radius;
-
         GetLine(_point1, _pointCentre, width, out var line1, isDirectionReversed);
         GetLine(_pointCentre, _point2, width, out var line2, isDirectionReversed);
 
@@ -267,11 +227,18 @@ public class MeshGenerator
             SwapRoads(ref line1, ref line2);
         }
 
-        float k1 = line1.k;
-        float k2 = line2.k;
+        // get parametres of lines 
+        float a1 = line1.a;
+        float b1 = line1.b;
+        float c1 = line1.c;
+
+        float a2 = line2.a;
+        float b2 = line2.b;
+        float c2 = line2.c;
 
         // case of parallel lines
-        if ( k1 == k2 )
+        float denominator = a1 * b2 - a2 * b1;
+        if (denominator == 0)
         {
             Vector3 road = _pointCentre - _point1;
             Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
@@ -282,22 +249,65 @@ public class MeshGenerator
         }
 
         // not parallel lines
-        float b1 = line1.bb;
-        float b2 = line2.bb;
-
         crossingPoint = new Vector3(
-            (b2 - b1) / (k1 - k2), 
-            0, 
-            (k1 * b2 - k2 * b1) / (k1 - k2));
+            (c2 * b1 - c1 * b2) / denominator,
+            0,
+            (a2 * c1 - a1 * c2) / denominator
+            );
+
+
+
+        //Quaternion.Ro
+
+
+
+        /*        float k1 = line1.k;
+                float k2 = line2.k;
+
+                // case of parallel lines
+                if ( k1 == k2 )
+                {
+                    Vector3 road = _pointCentre - _point1;
+                    Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
+                    crossingPoint = _pointCentre + normal * width;
+
+                    isCrossingPointValid = false;
+                    return;
+                }
+
+                // not parallel lines
+                float b1 = line1.bb;
+                float b2 = line2.bb;
+
+                crossingPoint = new Vector3(
+                    (b2 - b1) / (k1 - k2), 
+                    0, 
+                    (k1 * b2 - k2 * b1) / (k1 - k2));*/
 
         isCrossingPointValid = true;
+    }
+
+    /// <summary>
+    /// Определить, является ли направление инвертированным
+    /// </summary>
+    /// <returns></returns>
+    private bool DetectDirection()
+    {
+        // вектора дорог исходят из общей точки
+        Vector3 road1 = _point1 - _pointCentre;
+        Vector3 road2 = _point2 - _pointCentre;
+
+        // псевдоскалярное произведение - по формуле определителя
+        float pseudoScalarProduct = road1.x * road2.z - road1.z * road2.x;
+
+        return pseudoScalarProduct < 0;
     }
 
     /// <summary>
     /// переназначить дороги
     /// </summary>
     private void SwapRoads(ref Line line1, ref Line line2)
-    { 
+    {
         Line tempLine = line1;
         line1 = line2;
         line2 = tempLine;
@@ -321,7 +331,7 @@ public class MeshGenerator
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
 
         int sign = 1;
-        if ( isDirectionReversed )
+        if (isDirectionReversed)
         {
             sign = -1;
         }
