@@ -22,6 +22,8 @@ public class MeshGenerator
     /// </summary>
     private int _count = 5;
 
+    private float angleAbove = 0f;
+
     private Vector3[] _vertices;
     private int[] _triangles;
 
@@ -39,9 +41,11 @@ public class MeshGenerator
         _point1 = point1;
         _point2 = point2;
 
+        ChangeSystemOld2New();
         GenerateVerticesTriangles();
+        ChangeSystemNew2Old();
 
-        Mesh mesh = new Mesh
+        Mesh mesh = new Mesh 
         {
             vertices = _vertices,
             triangles = _triangles
@@ -50,6 +54,129 @@ public class MeshGenerator
         mesh.RecalculateNormals();
         return mesh;
     }
+
+    /// <summary>
+    /// change initial system to temporary 
+    /// </summary>
+    private void ChangeSystemOld2New()
+    {
+        // change an origin point
+        _pointCentre -= _point1;
+        _point2 -= _point1;
+        _point1 = Vector3.zero;
+
+        ChangePointSystem(ref _pointCentre);
+        ChangePointSystem(ref _point2);
+
+
+        /*// change central point
+        float angleUnder = Vector3.Angle(_pointCentre - _point1, new Vector3(1f, 0f, 0f));
+        float cos = Mathf.Cos(angleUnder * Mathf.Deg2Rad);
+        float radiusRotation; 
+        if (cos == 0 )
+        {
+            radiusRotation = Mathf.Abs( _pointCentre.z );
+        }
+        else
+        {
+            radiusRotation = _pointCentre.x / cos;
+        }
+        float angleRotation = 90f;
+        float angleAbove = angleRotation - angleUnder;
+
+        _pointCentre.x = radiusRotation * Mathf.Cos(angleRotation * Mathf.Deg2Rad);
+        _pointCentre.z = radiusRotation * Mathf.Sin(angleRotation * Mathf.Deg2Rad);
+
+        // change the last point
+        angleUnder = Vector3.Angle(_point2 - _point1, new Vector3(1f, 0f, 0f));
+        cos = Mathf.Cos(angleUnder * Mathf.Deg2Rad);
+        if (cos == 0)
+        {
+            radiusRotation = Mathf.Abs(_point2.z);
+        }
+        else
+        {
+            radiusRotation = _point2.x / cos;
+        } 
+        angleRotation = angleAbove + angleUnder;
+        _point2.x = radiusRotation * Mathf.Cos(angleRotation * Mathf.Deg2Rad);
+        _point2.z = radiusRotation * Mathf.Sin(angleRotation * Mathf.Deg2Rad);*/
+    } 
+
+
+    private void ChangePointSystem(ref Vector3 point)
+    {
+        // change central point
+        float angleUnder = Vector3.Angle(point - _point1, new Vector3(1f, 0f, 0f));
+        float cos = Mathf.Cos(angleUnder * Mathf.Deg2Rad);
+        float radiusRotation;
+        if (cos == 0)
+        {
+            radiusRotation = Mathf.Abs(point.z);
+        }
+        else
+        {
+            radiusRotation = point.x / cos;
+        }
+        float angleRotation;
+
+        // идет вычисление _pointCentre
+        if (angleAbove == 0)
+        {
+            angleRotation = 90f;
+            angleAbove = angleRotation - angleUnder;
+        }
+        else
+        {
+            angleRotation = angleAbove + angleUnder;
+        }
+
+        point.x = radiusRotation * Mathf.Cos(angleRotation * Mathf.Deg2Rad);
+        point.z = radiusRotation * Mathf.Sin(angleRotation * Mathf.Deg2Rad);
+
+
+        //---------------------------------
+         
+
+        // change the last point
+        /*angleUnder = Vector3.Angle(point - _point1, new Vector3(1f, 0f, 0f));
+        cos = Mathf.Cos(angleUnder * Mathf.Deg2Rad);
+        if (cos == 0)
+        {
+            radiusRotation = Mathf.Abs(point.z);
+        }
+        else
+        {
+            radiusRotation = point.x / cos;
+        }
+        angleRotation = angleAbove + angleUnder;
+        point.x = radiusRotation * Mathf.Cos(angleRotation * Mathf.Deg2Rad);
+        point.z = radiusRotation * Mathf.Sin(angleRotation * Mathf.Deg2Rad);
+        */
+    }
+
+
+    private void ChangeSystemNew2Old()
+    {
+        
+
+        // move and rotate vertices
+
+    }
+
+
+    /// <summary>
+    /// change point to temporary system
+    /// </summary>
+    /// <param name="pivot">точка, вокруг которой вращаем</param>
+    /// <param name="point">точка, которую вращаем</param>
+    /// <returns></returns>
+    /*private Vector3 ChangePoint(Vector3 pivot, Vector3 point)
+    {
+
+
+        return pointResult;
+    }*/
 
     /// <summary>
     /// генератор вершин и индексов

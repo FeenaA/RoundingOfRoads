@@ -29,7 +29,7 @@ public class Demonstration : MonoBehaviour
 
         GameObject spherePoint1 = Instantiate(spherePrefab);
 
-        spherePoint1.transform.position = new Vector3(0f, 0f, -10f);
+        spherePoint1.transform.position = new Vector3(-10f, 0f, -10f);
         _sphere1 = spherePoint1.GetComponent<SphereMovement>();
         _sphere1.PositionChanged += OnSpherePositionChanged;
         _sphere1.GetComponent<MeshRenderer>().material = materialSphere1;
