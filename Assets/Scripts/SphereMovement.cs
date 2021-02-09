@@ -18,15 +18,12 @@ public class SphereMovement : MonoBehaviour
             //Create a ray from the Mouse click position
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-            //Initialise the enter variable
-            float enter = 0.0f;
-
-            if (plane.Raycast(ray, out enter))
+            if (plane.Raycast(ray, out float enter))
             {
                 //Get the point that is clicked
                 Vector3 hitPoint = ray.GetPoint(enter);
 
-                //Move your cube GameObject to the point where you clicked
+                //Move your GameObject to the point where you clicked
                 transform.position = hitPoint;
 
                 PositionChanged?.Invoke();

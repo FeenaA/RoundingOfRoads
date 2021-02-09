@@ -42,7 +42,7 @@ public class Demonstration : MonoBehaviour
         GameObject road = new GameObject("MyRoad");
         roadMeshFilter = road.AddComponent<MeshFilter>();
 
-        MeshGenerator meshGenerator = new MeshGenerator();
+        RoadGenerator meshGenerator = new RoadGenerator();
         mesh = meshGenerator.GetMesh(_sphereCenter.transform.position, _sphere1.transform.position, _sphere2.transform.position);
         roadMeshFilter.sharedMesh = mesh;
 
@@ -52,7 +52,7 @@ public class Demonstration : MonoBehaviour
 
     private void OnSpherePositionChanged()
     {
-        MeshGenerator meshGenerator = new MeshGenerator();
+        RoadGenerator meshGenerator = new RoadGenerator();
         mesh = meshGenerator.GetMesh(_sphereCenter.transform.position, _sphere1.transform.position, _sphere2.transform.position);
         roadMeshFilter.sharedMesh = mesh;
     }
