@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEngine;
 
 public class RoadGenerator
@@ -40,19 +39,56 @@ public class RoadGenerator
     /// <summary>
     /// создать и заполнить mesh
     /// </summary>
-    public Mesh GetMesh(Vector3 pointCentre, Vector3 point1, Vector3 point2)
+    public Mesh GetMesh(Vector3[] points)
     {
         halfWidth = roadWidth / 2f;
 
-        _pointCentre = pointCentre;
-        _point1 = point1;
-        _point2 = point2;
 
-        ChangeSystemOld2New();
+        // ---
+        // дать размер массивам
+        // построить начальные две точки 1_0, 2_0
+//        _vertices[currentIndex] = new Vector3(-halfWidth, 0f, 0f);
+//        _vertices[++currentIndex] = new Vector3(-halfWidth, 0f, 0f);
+
+        // в цикле:
+        //      построить тройку вершин в новой СК
+
+        //      точки 1_0, 2_0 в новую СК
+        //      mesh: первый прямоугольник и гармошка
+        //      к старой СК
+        //      назначить новую point1 в конце гармошки
+
+        // построить последние две точки
+        // построить последний прямоугольник
+        // ---
+
+
+        int iterationCount = points.Length - 2;
+
+        // the first corner
+        _point1 = points[0];
+        _pointCentre = points[1];
+        _point2 = points[2];
+
+        ChangeSystemOld2New(ref _point1, ref _pointCentre, ref _point2);
         GenerateVerticesTriangles();
-        ChangeSystemNew2Old(point1);
+        ChangeSystemNew2Old(points[0]);
 
-        Mesh mesh = new Mesh 
+        // middle corners
+        for (int i = 1; i < iterationCount; i++)
+        {
+            _point1 = points[i];
+            _pointCentre = points[i + 1];
+            _point2 = points[i + 2];
+
+            ChangeSystemOld2New(ref _point1, ref _pointCentre, ref _point2);
+            /*
+                        GenerateVerticesTriangles();
+                        ChangeSystemNew2Old(points[i - 1]);
+            */
+        }
+
+        Mesh mesh = new Mesh
         {
             vertices = _vertices,
             triangles = _triangles,
@@ -65,21 +101,22 @@ public class RoadGenerator
     /// <summary>
     /// change initial system to temporary 
     /// </summary>
-    private void ChangeSystemOld2New()
+    //private void ChangeSystemOld2New()
+    private void ChangeSystemOld2New(ref Vector3 _point1, ref Vector3 _pointCentre, ref Vector3 _point2)
     {
         // change an origin point
         _pointCentre -= _point1;
         _point2 -= _point1;
-        _point1 = Vector3.zero;
+        _point1 = Vector3.zero; 
 
         // get point direction relative to pivot
-        Vector3 dir = _pointCentre - _point1; 
+        Vector3 dir = _pointCentre - _point1;
         var s = -1 * Mathf.Sign(_pointCentre.x);
         angle = s * Vector3.Angle(dir, Vector3.forward);
 
         // rotation
-        rotation = Quaternion.AngleAxis(angle, Vector3.up); 
-        
+        rotation = Quaternion.AngleAxis(angle, Vector3.up);
+
         // calculate rotated points
         _pointCentre = rotation * _pointCentre;
         _point2 = rotation * _point2;
@@ -101,7 +138,7 @@ public class RoadGenerator
             _normals[i] = Vector3.up;
         }
     }
-      
+
     /// <summary>
     /// генератор вершин и индексов
     /// </summary>
