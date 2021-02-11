@@ -4,6 +4,7 @@ public class Demonstration : MonoBehaviour
 {
     public Material material;
     public Material materialSphere1;
+    public Material materialSphere2; 
 
     public GameObject spherePrefab;
 
@@ -12,12 +13,16 @@ public class Demonstration : MonoBehaviour
 
     public GameObject clickedSphere;
 
-    //    private SphereMovement _sphereCentre;
     private SphereMovement _sphere1;
     private SphereMovement _sphere2;
     private SphereMovement _sphere3;
     private SphereMovement _sphere4;
     private SphereMovement _sphere5;
+
+    /// <summary>
+    /// ширина дорог
+    /// </summary>
+    private readonly float roadWidth = 2f;
 
     void Awake()
     {
@@ -25,8 +30,8 @@ public class Demonstration : MonoBehaviour
 
         Vector3[] points = new Vector3[]
     {
-            new Vector3(2f, 0f, 8f),
-            new Vector3(9f, 0f, 11f),
+            new Vector3(2f, 0f, 15f),
+            new Vector3(4f, 0f, 3f),
             new Vector3(13f, 0f, 8f),
             new Vector3(9f, 0f, 5f),
             new Vector3(12f, 0f, 3f),
@@ -42,6 +47,7 @@ public class Demonstration : MonoBehaviour
         spherePoint2.transform.position = points[++currentPoint];
         _sphere2 = spherePoint2.GetComponent<SphereMovement>();
         _sphere2.PositionChanged += OnSpherePositionChanged;
+        _sphere2.GetComponent<MeshRenderer>().material = materialSphere2;
 
         GameObject spherePoint3 = Instantiate(spherePrefab);
         spherePoint3.transform.position = points[++currentPoint];
@@ -63,7 +69,7 @@ public class Demonstration : MonoBehaviour
         roadMeshFilter = road.AddComponent<MeshFilter>();
 
         RoadGenerator meshGenerator = new RoadGenerator();
-        mesh = meshGenerator.GetMesh(points);
+        mesh = meshGenerator.GetMesh(points, roadWidth); 
         roadMeshFilter.sharedMesh = mesh;
 
         var meshRenderer = road.AddComponent<MeshRenderer>();
@@ -82,7 +88,7 @@ public class Demonstration : MonoBehaviour
         };
 
         RoadGenerator meshGenerator = new RoadGenerator();
-        mesh = meshGenerator.GetMesh(points);
+        mesh = meshGenerator.GetMesh(points, roadWidth);
         roadMeshFilter.sharedMesh = mesh;
     }
 }

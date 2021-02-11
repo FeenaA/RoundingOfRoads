@@ -1,17 +1,13 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class RoadGenerator
 {
-    // базовые точки
-    private Vector3 _pointCentre;
-    private Vector3 _point1;
-    private Vector3 _point2;
-
     /// <summary>
     /// ширина дорог
     /// </summary>
-    private readonly float roadWidth = 2f;
+    private float _roadWidth;
     private float halfWidth;
 
     /// <summary>
@@ -24,75 +20,56 @@ public class RoadGenerator
     /// </summary>
     private readonly int _count = 5;
 
-    private Vector3[] _vertices;
-    private int[] _triangles;
-    private Vector3[] _normals;
+    private readonly List<Vector3> _verticesList = new List<Vector3>();
+    private readonly List<int> _trianglesList = new List<int>();
+    private readonly List<Vector3> _normalsList = new List<Vector3>();
 
-    private Vector3 roundnessPoint;
     private int currentIndex = 0;
-    private Vector3 crossingPoint;
-    private bool isCrossingPointValid;
 
-    private float angle;
-    private Quaternion rotation;
+
 
     /// <summary>
     /// создать и заполнить mesh
     /// </summary>
-    public Mesh GetMesh(Vector3[] points)
+    public Mesh GetMesh(Vector3[] points, float roadWidth)
     {
-        halfWidth = roadWidth / 2f;
+        _roadWidth = roadWidth;
+        halfWidth = _roadWidth / 2f;
 
-
-        // ---
-        // дать размер массивам
-        // построить начальные две точки 1_0, 2_0
-//        _vertices[currentIndex] = new Vector3(-halfWidth, 0f, 0f);
-//        _vertices[++currentIndex] = new Vector3(-halfWidth, 0f, 0f);
-
-        // в цикле:
-        //      построить тройку вершин в новой СК
-
-        //      точки 1_0, 2_0 в новую СК
-        //      mesh: первый прямоугольник и гармошка
-        //      к старой СК
-        //      назначить новую point1 в конце гармошки
-
-        // построить последние две точки
-        // построить последний прямоугольник
-        // ---
-
+        _verticesList.Add(new Vector3(halfWidth, 0f, 0f));
+        _verticesList.Add(new Vector3(-halfWidth, 0f, 0f));
 
         int iterationCount = points.Length - 2;
 
-        // the first corner
-        _point1 = points[0];
-        _pointCentre = points[1];
-        _point2 = points[2];
-
-        ChangeSystemOld2New(ref _point1, ref _pointCentre, ref _point2);
-        GenerateVerticesTriangles();
-        ChangeSystemNew2Old(points[0]);
-
         // middle corners
-        for (int i = 1; i < iterationCount; i++)
+        for (int i = 1; i < 3 /*2*/ /*iterationCount*/; i++)
         {
-            _point1 = points[i];
-            _pointCentre = points[i + 1];
-            _point2 = points[i + 2];
+            var point1 = points[i - 1];
+            var pointCentre = points[i];
+            var point2 = points[i + 1];
 
-            ChangeSystemOld2New(ref _point1, ref _pointCentre, ref _point2);
-            /*
-                        GenerateVerticesTriangles();
-                        ChangeSystemNew2Old(points[i - 1]);
-            */
+            var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
+            // mesh: первый прямоугольник и гармошка
+            GenerateVerticesTriangles(p1, p2, pC);
+
+            // --- поворачивать в старую систему координат только новый угол
+            ChangeSystemNew2Old(points[i - 1], rot);
+
+            // --- назначить новые две точки в конце текущей гармошки в качестве стартовых для нового угла
+
+
         }
+
+        // построить последние две точки
+        // построить последний прямоугольник
+
+        //GetStraightVertices(points[points.Length - 1], -1);
 
         Mesh mesh = new Mesh
         {
-            vertices = _vertices,
-            triangles = _triangles,
-            normals = _normals,
+            vertices = _verticesList.ToArray(),
+            triangles = _trianglesList.ToArray(),
+            normals = _normalsList.ToArray(),
         };
 
         return mesh;
@@ -101,75 +78,65 @@ public class RoadGenerator
     /// <summary>
     /// change initial system to temporary 
     /// </summary>
-    //private void ChangeSystemOld2New()
-    private void ChangeSystemOld2New(ref Vector3 _point1, ref Vector3 _pointCentre, ref Vector3 _point2)
+    private (Vector3 p1, Vector3 p2, Vector3 pC, Quaternion rotation) ChangeSystemOld2New(Vector3 point1, Vector3 point2, Vector3 pointCentre)
     {
         // change an origin point
-        _pointCentre -= _point1;
-        _point2 -= _point1;
-        _point1 = Vector3.zero; 
+        var pC = pointCentre - point1;
+        var p2 = point2 - point1;
+        var p1 = Vector3.zero;
 
         // get point direction relative to pivot
-        Vector3 dir = _pointCentre - _point1;
-        var s = -1 * Mathf.Sign(_pointCentre.x);
-        angle = s * Vector3.Angle(dir, Vector3.forward);
+        Vector3 dir = pC - p1;
+        var s = -1 * Mathf.Sign(pC.x);
+        var angle = s * Vector3.Angle(dir, Vector3.forward);
 
         // rotation
-        rotation = Quaternion.AngleAxis(angle, Vector3.up);
+        var rotation = Quaternion.AngleAxis(angle, Vector3.up);
 
         // calculate rotated points
-        _pointCentre = rotation * _pointCentre;
-        _point2 = rotation * _point2;
+        pC = rotation * pC;
+        p2 = rotation * p2;
+
+        return (p1, p2, pC, rotation);
     }
 
     /// <summary>
     /// move _vertices to old basis
     /// </summary>
     /// <param name="point1">pivot</param>
-    private void ChangeSystemNew2Old(Vector3 point1)
+    private void ChangeSystemNew2Old(Vector3 point1, Quaternion rotation)
     {
         // rotation
         var rot = Quaternion.Inverse(rotation);
 
         // move and rotate vertices
-        for (int i = 0; i < _vertices.Length; i++)
+        for (int i = 0; i < _verticesList.Count; i++)
         {
-            _vertices[i] = rot * _vertices[i] + point1;
-            _normals[i] = Vector3.up;
+            _verticesList[i] = rot * _verticesList[i] + point1;
+            _normalsList.Add(Vector3.up);
         }
     }
 
     /// <summary>
     /// генератор вершин и индексов
-    /// </summary>
-    private void GenerateVerticesTriangles()
-    {
-        // получить центр окружностей
-        CalculateCenterOfCircle();
-
-        // выделить память для вершин и индексов
-        AllocateMemory();
-
-        // получить точку скругления
-        GetRoundnessPoint();
-
-        // заполнить массивы вершин и индексов
-        FillVerticesTriangles();
-    }
-
-    /// <summary>
     /// заполнить массивы вершин и индексов
     /// </summary>
-    private void FillVerticesTriangles()
+    private void GenerateVerticesTriangles(Vector3 point1, Vector3 point2, Vector3 pointCentre)
     {
-        int currentVertic = 0;
+        int directionSign = DetectDirection(point1, point2, pointCentre);
 
-        // получить точки первого края дороги
-        GetStraightVertices(_point1, 1, ref currentVertic);
+        // получить центр окружностей
+        Vector3 crossingPoint = GetCenterOfCircle(directionSign, point1, point2, pointCentre);
+
+        // получить точку скругления
+        Vector3 road = point1 - pointCentre;
+        //Vector3 road = _pointCentre - _point2;
+        Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
+        Vector3 roundnessPoint = crossingPoint + directionSign * normal * radius;
 
         // определить сектор поворота
         Vector3 vectorStart = roundnessPoint - crossingPoint;
-        Vector3 mediana = _pointCentre - crossingPoint;
+        Vector3 mediana = pointCentre - crossingPoint;
         float angleRoads = Vector3.Angle(vectorStart, mediana) * 2f;
 
         float deltaAngle = angleRoads / _count;
@@ -179,51 +146,21 @@ public class RoadGenerator
         int currentCount = (angleX == 0) ? 0 : _count;
         for (int i = 0; i <= currentCount; i++)
         {
-            _vertices[currentVertic++] = Rotate(radius, angleX + i * deltaAngle, crossingPoint);
-            _vertices[currentVertic++] = Rotate(radius + roadWidth, angleX + i * deltaAngle, crossingPoint);
 
-            GetGuard(currentVertic - 4);
+
+            if (directionSign > 0)
+            {
+                _verticesList.Add(Rotate(radius, angleX + directionSign * i * deltaAngle, crossingPoint));
+                _verticesList.Add(Rotate(radius + _roadWidth, angleX + directionSign * i * deltaAngle, crossingPoint));
+            }
+            else
+            {
+                _verticesList.Add(Rotate(radius + _roadWidth, angleX + directionSign * i * deltaAngle, crossingPoint));
+                _verticesList.Add(Rotate(radius, angleX + directionSign * i * deltaAngle, crossingPoint));
+            }
+
+            GetGuard();
         }
-        // получить точки второго края дороги
-        GetStraightVertices(_point2, -1, ref currentVertic);
-
-        GetGuard(currentVertic - 4);
-    }
-
-    /// <summary>
-    /// выделить память для вершин и индексов
-    /// </summary>
-    private void AllocateMemory()
-    {
-        int verticesCount;
-        int guardCount;
-
-        if (isCrossingPointValid)
-        {
-            // прямые под углом
-            verticesCount = (4 + _count) * 2;
-            guardCount = 2 + 1 + _count;
-        }
-        else
-        {
-            // угол вырожден
-            verticesCount = 3 * 2;
-            guardCount = 2;
-        }
-
-        _vertices = new Vector3[verticesCount];
-        _normals = new Vector3[verticesCount];
-        _triangles = new int[guardCount * 2 * 3];
-    }
-
-    /// <summary>
-    /// получить точки начала скругления
-    /// </summary>
-    private void GetRoundnessPoint()
-    {
-        Vector3 road = _point1 - _pointCentre;
-        Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
-        roundnessPoint = crossingPoint + normal * radius;
     }
 
     /// <summary>
@@ -232,16 +169,19 @@ public class RoadGenerator
     /// <param name="point">конец первой или второй дороги</param>
     /// <param name="isInverted">прямой или обратный порядок</param>
     /// <param name="currentVertic">текущее количество вершин</param>
-    private void GetStraightVertices(Vector3 point, int isInverted, ref int currentVertic)
+    private void GetStraightVertices(Vector3 point, Vector3 pointCentre, int isInverted)
     {
-        Vector3 road = point - _pointCentre;
+        Vector3 road = point - pointCentre;
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized * halfWidth;
 
         Vector3 vertic1 = point - isInverted * normal;
         Vector3 vertic2 = point + isInverted * normal;
 
-        _vertices[currentVertic++] = vertic1;
-        _vertices[currentVertic++] = vertic2;
+        _verticesList.Add(vertic1);
+        _verticesList.Add(vertic2);
+
+        _normalsList.Add(Vector3.up);
+        _normalsList.Add(Vector3.up);
     }
 
     /// <summary>
@@ -265,38 +205,33 @@ public class RoadGenerator
     /// <summary>
     /// заполнение индексов для треугольников
     /// </summary>
-    /// <param name="currentIndex"></param>
-    /// <param name="index">индекс левой нижней вершины</param>
-    /// <param name="v01">индекс левой верхней вершины</param>
-    /// <param name="v10">индекс правой нижней вершины</param>
-    /// <param name="v11">индекс правой верхней вершины</param>
-    private void GetGuard(int index)
+    private void GetGuard()
     {
-        _triangles[currentIndex++] = index;
-        _triangles[currentIndex++] = index + 1;
-        _triangles[currentIndex++] = index + 3;
+        _trianglesList.Add(currentIndex);
+        _trianglesList.Add(currentIndex + 1);
+        _trianglesList.Add(currentIndex + 3);
 
-        _triangles[currentIndex++] = index;
-        _triangles[currentIndex++] = index + 3;
-        _triangles[currentIndex++] = index + 2;
+        _trianglesList.Add(currentIndex);
+        _trianglesList.Add(currentIndex + 3);
+        _trianglesList.Add(currentIndex + 2);
+
+        currentIndex += 2;
     }
 
     /// <summary>
     /// найти центр окружностей
     /// </summary> 
-    private void CalculateCenterOfCircle()
+    private Vector3 GetCenterOfCircle(int directionSign, Vector3 point1, Vector3 point2, Vector3 pointCentre)
     {
-        int directionSign = DetectDirection();
-
         float width = halfWidth + radius;
-        GetLine(_point1, _pointCentre, width, out var line1, directionSign);
-        GetLine(_pointCentre, _point2, width, out var line2, directionSign);
+        GetParallelLine(point1, pointCentre, width, out var line1, directionSign);
+        GetParallelLine(pointCentre, point2, width, out var line2, directionSign);
 
         // swap roads
-        if (directionSign < 0)
-        {
-            SwapRoads(ref line1, ref line2);
-        }
+        //if (directionSign < 0)
+        //{
+        //    SwapRoads(ref line1, ref line2);
+        //}
 
         // get parametres of lines 
         float a1 = line1.a;
@@ -311,33 +246,28 @@ public class RoadGenerator
         float denominator = a1 * b2 - a2 * b1;
         if (denominator == 0f)
         {
-            Vector3 road = _pointCentre - _point1;
+            Vector3 road = pointCentre - point1;
             Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
-            crossingPoint = _pointCentre + normal * width;
-
-            isCrossingPointValid = false;
-            return;
+            return pointCentre + normal * width;
         }
 
         // not parallel lines
-        crossingPoint = new Vector3(
+        return new Vector3(
             (c2 * b1 - c1 * b2) / denominator,
             0,
             (a2 * c1 - a1 * c2) / denominator
             );
-
-        isCrossingPointValid = true;
     }
 
     /// <summary>
     /// Определить, является ли угол тупым
     /// </summary>
     /// <returns></returns>
-    private int DetectDirection()
+    private int DetectDirection(Vector3 point1, Vector3 point2, Vector3 pointCentre)
     {
         // вектора дорог исходят из общей точки
-        Vector3 road1 = _point1 - _pointCentre;
-        Vector3 road2 = _point2 - _pointCentre;
+        Vector3 road1 = point1 - pointCentre;
+        Vector3 road2 = point2 - pointCentre;
 
         // псевдоскалярное произведение - по формуле определителя
         float pseudoScalarProduct = road1.x * road2.z - road1.z * road2.x;
@@ -354,9 +284,17 @@ public class RoadGenerator
         line1 = line2;
         line2 = tempLine;
 
-        Vector3 tempPoint = _point1;
-        _point1 = _point2;
-        _point2 = tempPoint;
+        //Vector3 tempPoint = _point1;
+        //_point1 = _point2;
+        //_point2 = tempPoint;
+
+        //// remove the first 
+        //_verticesList.RemoveAt(0);
+        //_verticesList.RemoveAt(0);
+
+        //GetStraightVertices(_point1, -1);
+        //_verticesList.Add(new Vector3(halfWidth, 0f, 0f));
+        //_verticesList.Add(new Vector3(-halfWidth, 0f, 0f));
     }
 
     /// <summary>
@@ -368,7 +306,7 @@ public class RoadGenerator
     /// <param name="line"></param>
     /// <param name="isDirectionReversed"></param>
     /// <returns></returns>
-    private Vector3 GetLine(Vector3 point1, Vector3 point2, float width, out Line line, int sign)
+    private Vector3 GetParallelLine(Vector3 point1, Vector3 point2, float width, out Line line, int sign)
     {
         Vector3 road = new Vector3(point2.x - point1.x, point2.y - point1.y, point2.z - point1.z);
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
