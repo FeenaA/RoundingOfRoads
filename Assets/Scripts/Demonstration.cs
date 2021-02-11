@@ -30,11 +30,11 @@ public class Demonstration : MonoBehaviour
 
         Vector3[] points = new Vector3[]
     {
-            new Vector3(2f, 0f, 15f),
-            new Vector3(4f, 0f, 3f),
-            new Vector3(13f, 0f, 8f),
-            new Vector3(9f, 0f, 5f),
-            new Vector3(12f, 0f, 3f),
+            new Vector3(-5f, 0f, -1f),
+            new Vector3(5f, 0f, 3f),
+            new Vector3(9f, 0f, 8f),
+            new Vector3(13f, 0f, 3f),
+            new Vector3(17f, 0f, 3f),
     };
 
         GameObject spherePoint1 = Instantiate(spherePrefab);
@@ -53,6 +53,7 @@ public class Demonstration : MonoBehaviour
         spherePoint3.transform.position = points[++currentPoint];
         _sphere3 = spherePoint3.GetComponent<SphereMovement>();
         _sphere3.PositionChanged += OnSpherePositionChanged;
+        _sphere3.GetComponent<MeshRenderer>().material = materialSphere1;
 
         GameObject spherePoint4 = Instantiate(spherePrefab);
         spherePoint4.transform.position = points[++currentPoint];
@@ -68,8 +69,8 @@ public class Demonstration : MonoBehaviour
         GameObject road = new GameObject("MyRoad");
         roadMeshFilter = road.AddComponent<MeshFilter>();
 
-        RoadGenerator meshGenerator = new RoadGenerator();
-        mesh = meshGenerator.GetMesh(points, roadWidth); 
+        RoadGenerator roadGenerator = new RoadGenerator();
+        mesh = roadGenerator.GetMesh(points, roadWidth); 
         roadMeshFilter.sharedMesh = mesh;
 
         var meshRenderer = road.AddComponent<MeshRenderer>();
