@@ -34,7 +34,7 @@ public class Demonstration : MonoBehaviour
             new Vector3(5f, 0f, -10f),
             new Vector3(13f, 0f, 3f),
             new Vector3(14f, 0f, 3f),
-            new Vector3(-5f, 0f, -1f),
+            new Vector3(5f, 0f, -1f),
     };
 
         GameObject spherePoint1 = Instantiate(spherePrefab);
@@ -47,13 +47,11 @@ public class Demonstration : MonoBehaviour
         spherePoint2.transform.position = points[++currentPoint];
         _sphere2 = spherePoint2.GetComponent<SphereMovement>();
         _sphere2.PositionChanged += OnSpherePositionChanged;
-        _sphere2.GetComponent<MeshRenderer>().material = materialSphere2;
 
         GameObject spherePoint3 = Instantiate(spherePrefab);
         spherePoint3.transform.position = points[++currentPoint];
         _sphere3 = spherePoint3.GetComponent<SphereMovement>();
         _sphere3.PositionChanged += OnSpherePositionChanged;
-        _sphere3.GetComponent<MeshRenderer>().material = materialSphere1;
 
         GameObject spherePoint4 = Instantiate(spherePrefab);
         spherePoint4.transform.position = points[++currentPoint];
@@ -64,6 +62,7 @@ public class Demonstration : MonoBehaviour
         spherePoint5.transform.position = points[++currentPoint];
         _sphere5 = spherePoint5.GetComponent<SphereMovement>();
         _sphere5.PositionChanged += OnSpherePositionChanged;
+        _sphere5.GetComponent<MeshRenderer>().material = materialSphere2;
 
         // mesh
         GameObject road = new GameObject("MyRoad");
