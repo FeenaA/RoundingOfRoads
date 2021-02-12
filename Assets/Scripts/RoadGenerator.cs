@@ -16,189 +16,73 @@ public class RoadGenerator
     private readonly float radius = 1f;
 
     /// <summary>
-    /// количество промежуточных точек на скруглении
+    /// примерный угол одного сектора
     /// </summary>
-    private readonly int _count = 5;
+    private readonly int maxAngle = 15;
 
     private readonly List<Vector3> _verticesList = new List<Vector3>();
     private readonly List<int> _trianglesList = new List<int>();
     private readonly List<Vector3> _normalsList = new List<Vector3>();
 
-    //    int count = (int)(Mathf.Abs(angle) / maxAngle) + 1;
-
     /// <summary>
     /// создать и заполнить mesh
     /// </summary>
-    /*    public Mesh GetMesh(Vector3[] pointsInput, float roadWidth)
-        {
-            float sqrMinDistance = 2 * radius + _roadWidth;
-            sqrMinDistance *= sqrMinDistance;
-
-            Vector3[] points = RemoveSeriasOfPoints(pointsInput, sqrMinDistance);
-            // проверка, является ли дорога кольцом
-            bool isCycled = ArePointsClose(points[0], points[points.Length - 1], sqrMinDistance);
-
-            _roadWidth = roadWidth;
-            halfWidth = _roadWidth / 2f;
-
-            _normalsList.Add(Vector3.up);
-            _normalsList.Add(Vector3.up);
-
-            int currentIndex = 0;
-
-            //if (!isCycled)
-            {
-                // обработка первого угла
-                var point1 = points[0];
-                var pointCentre = points[1];
-                var point2 = points[2];
-
-                var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
-
-                var rot1 = Quaternion.Inverse(rot);
-
-                // first section
-                _verticesList.Add(rot1 * new Vector3(halfWidth, 0f, 0f) + point1);
-                _verticesList.Add(rot1 * new Vector3(-halfWidth, 0f, 0f) + point1);
-
-                var currentVertex = _verticesList.Count;
-
-                GenerateVerticesTriangles(p1, p2, pC, ref currentIndex);
-                ChangeSystemNew2Old(point1, rot, currentVertex);
-            }
-
-            int iterationCount = points.Length - 1;
-
-            // middle corners
-            for (int i = 2; i < iterationCount; i++)
-            {
-                var point1 = points[i - 1];
-                var pointCentre = points[i];
-                var point2 = points[i + 1];
-
-                var currentVertex = _verticesList.Count;
-
-                var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
-
-                GenerateVerticesTriangles(p1, p2, pC, ref currentIndex);
-                ChangeSystemNew2Old(point1, rot, currentVertex);
-            }
-
-            // --- обработка "бублика"
-            // если точки совпадают, сделать ещё одну итерацию
-
-
-
-            // иначе - закрытие дороги
-            // last section
-            AddLastSection(points[iterationCount - 1], points[iterationCount], currentIndex);
-
-            // ---
-
-            Mesh mesh = new Mesh
-            {
-                vertices = _verticesList.ToArray(),
-                triangles = _trianglesList.ToArray(),
-                normals = _normalsList.ToArray(),
-            };
-
-            return mesh;
-        }*/
-
     public Mesh GetMesh(Vector3[] pointsInput, float roadWidth)
     {
-        float sqrMinDistance = 2 * radius + _roadWidth;
-        sqrMinDistance *= sqrMinDistance;
-
-        Vector3[] points = RemoveSeriasOfPoints(pointsInput, sqrMinDistance);
-        // проверка, является ли дорога кольцом
-        bool isCycled = ArePointsClose(points[0], points[points.Length - 1], sqrMinDistance);
-
-        int iterationCount = points.Length - 1;
-        int iterationStart = 2;
-
+        // preparation
         _roadWidth = roadWidth;
         halfWidth = _roadWidth / 2f;
 
+        float sqrMinDistance = 2f * radius + _roadWidth;
+        sqrMinDistance *= sqrMinDistance;
+
+        Vector3[] points = RemoveSeriasOfPoints(pointsInput, sqrMinDistance);
+        bool isCycled = PointsClose(points[0], points[points.Length - 1], sqrMinDistance);
         int currentIndex = 0;
 
-        // обработка первого угла
-        if (isCycled)
+        // first section
         {
             var point1 = points[0];
-            var pointCentre = points[1];
             var point2 = points[2];
 
-            var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
+            var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, points[1]);
+
+            currentIndex = GetGuard(currentIndex);
+
+            // граф не является циклом
+            if (!isCycled)
+            {
+                _normalsList.Add(Vector3.up);
+                _normalsList.Add(Vector3.up);
+
+                var rot1 = Quaternion.Inverse(rot);
+
+                _verticesList.Add(rot1 * new Vector3(halfWidth, 0f, 0f) + point1);
+                _verticesList.Add(rot1 * new Vector3(-halfWidth, 0f, 0f) + point1);
+            }
 
             var currentVertex = _verticesList.Count;
-
-            GenerateVerticesTriangles(p1, p2, pC, ref currentIndex);
-            ChangeSystemNew2Old(point1, rot, currentVertex);
-
-            iterationStart = 1;
-        }
-        else
-        {
-            // correct
-
-            var point1 = points[0];
-            var pointCentre = points[1];
-            var point2 = points[2];
-
-            _normalsList.Add(Vector3.up);
-            _normalsList.Add(Vector3.up);
-
-            var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
-
-            var rot1 = Quaternion.Inverse(rot);
-
-            // first section
-            _verticesList.Add(rot1 * new Vector3(halfWidth, 0f, 0f) + point1);
-            _verticesList.Add(rot1 * new Vector3(-halfWidth, 0f, 0f) + point1);
-
-            var currentVertex = _verticesList.Count;
-
             GenerateVerticesTriangles(p1, p2, pC, ref currentIndex);
             ChangeSystemNew2Old(point1, rot, currentVertex);
         }
 
         // middle corners
+        int iterationCount = points.Length - 1;
+        int iterationStart = (isCycled == true) ? 1 : 2;
         for (int i = iterationStart; i < iterationCount; i++)
         {
             currentIndex = GetGuard(currentIndex);
-
-            var point1 = points[i - 1];
-            var pointCentre = points[i];
-            var point2 = points[i + 1];
-
-            var currentVertex = _verticesList.Count;
-
-            var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
-
-            GenerateVerticesTriangles(p1, p2, pC, ref currentIndex);
-            ChangeSystemNew2Old(point1, rot, currentVertex);
-
-            
+            currentIndex = CompleteCorner(points[i - 1], points[i + 1], points[i], currentIndex);
         }
-        currentIndex = GetGuard(currentIndex);
 
+        // last section
         if (!isCycled)
         {
-            AddExtremeSection(points[iterationCount - 1], points[iterationCount], currentIndex );
+            AddExtremeSection(points[iterationCount - 1], points[iterationCount], currentIndex);
         }
         else
         {
-            var point1 = points[iterationCount-1];
-            var pointCentre = points[iterationCount];
-            var point2 = points[1];
-
-            var currentVertex = _verticesList.Count;
-
-            var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
-
-            GenerateVerticesTriangles(p1, p2, pC, ref currentIndex);
-            ChangeSystemNew2Old(point1, rot, currentVertex);
+            currentIndex = CompleteCorner(points[iterationCount - 1], points[1], points[iterationCount], currentIndex);
 
             _trianglesList.Add(currentIndex);
             _trianglesList.Add(currentIndex + 1);
@@ -220,6 +104,24 @@ public class RoadGenerator
     }
 
     /// <summary>
+    /// complete mesh at rounding corners
+    /// </summary>
+    /// <param name="point1"></param>
+    /// <param name="point2"></param>
+    /// <param name="pointCentre"></param>
+    /// <param name="currentIndex"></param>
+    private int CompleteCorner(Vector3 point1, Vector3 point2, Vector3 pointCentre, int currentIndex)
+    {
+        var (p1, p2, pC, rot) = ChangeSystemOld2New(point1, point2, pointCentre);
+
+        var currentVertex = _verticesList.Count;
+        GenerateVerticesTriangles(p1, p2, pC, ref currentIndex);
+        ChangeSystemNew2Old(point1, rot, currentVertex);
+        
+        return currentIndex;
+    }
+
+    /// <summary>
     /// исключить из рассмотрения дублирующиеся точки, идущие подряд
     /// </summary>
     /// <param name="points"></param>
@@ -232,7 +134,7 @@ public class RoadGenerator
         for (int i = 1; i < points.Length; i++)
         {
             // если точки расположены близко друг к другу, заменить их средней точкой
-            if (ArePointsClose(currentPoint, points[i], sqrMinDistance))
+            if (PointsClose(currentPoint, points[i], sqrMinDistance))
             {
                 currentPoint = new Vector3(
                     (currentPoint.x + points[i].x) / 2f,
@@ -257,7 +159,7 @@ public class RoadGenerator
     /// <param name="point2"></param>
     /// <param name="sqrDistance">Квадрат минимального расстояния между вершинами</param>
     /// <returns></returns>
-    private bool ArePointsClose(Vector3 point1, Vector3 point2, float sqrDistance)
+    private bool PointsClose(Vector3 point1, Vector3 point2, float sqrDistance)
     {
         float deltaX = point1.x - point2.x;
         float deltaZ = point1.z - point2.z;
@@ -327,46 +229,6 @@ public class RoadGenerator
     /// <summary>
     /// генератор вершин и индексов
     /// </summary>
-    /*private void GenerateVerticesTriangles(Vector3 point1, Vector3 point2, Vector3 pointCentre, ref int currentIndex)
-    {
-        int directionSign = DetectDirection(point1, point2, pointCentre);
-
-        // получить центр окружностей
-        Vector3 crossingPoint = GetCenterOfCircle(directionSign, point2, pointCentre);
-
-        // получить точку скругления
-        Vector3 road = point1 - pointCentre;
-        Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
-        Vector3 roundnessPoint = crossingPoint + directionSign * normal * radius;
-
-        // определить сектор поворота
-        Vector3 vectorStart = roundnessPoint - crossingPoint;
-        Vector3 mediana = pointCentre - crossingPoint;
-        float angleRoads = Vector3.Angle(vectorStart, mediana) * 2f;
-
-        float deltaAngle = angleRoads / _count;
-        float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;
-
-        // построить скругленный участок
-        int currentCount = (angleX == 0) ? 0 : _count;
-
-        for (int i = 0; i <= currentCount; i++)
-        {
-            if (directionSign > 0)
-            {
-                _verticesList.Add(Rotate(radius, angleX + directionSign * i * deltaAngle, crossingPoint));
-                _verticesList.Add(Rotate(radius + _roadWidth, angleX + directionSign * i * deltaAngle, crossingPoint));
-            }
-            else
-            {
-                _verticesList.Add(Rotate(radius + _roadWidth, angleX + directionSign * i * deltaAngle, crossingPoint));
-                _verticesList.Add(Rotate(radius, angleX + directionSign * i * deltaAngle, crossingPoint));
-            }
-
-            currentIndex = GetGuard(currentIndex);
-        }
-    }*/
-
     private void GenerateVerticesTriangles(Vector3 point1, Vector3 point2, Vector3 pointCentre, ref int currentIndex)
     {
         int directionSign = DetectDirection(point1, point2, pointCentre);
@@ -384,11 +246,14 @@ public class RoadGenerator
         Vector3 mediana = pointCentre - crossingPoint;
         float angleRoads = Vector3.Angle(vectorStart, mediana) * 2f;
 
-        float deltaAngle = angleRoads / _count;
+        // количество точек разбиения
+        int count = (int)(Mathf.Abs(angleRoads) / maxAngle) + 1;
+
+        float deltaAngle = angleRoads / count;
         float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;
 
         // построить скругленный участок
-        int currentCount = (angleX == 0) ? 0 : _count;
+        int currentCount = (angleX == 0) ? 0 : count;
 
         // нулевая итерация
         if (directionSign > 0)
@@ -515,9 +380,10 @@ public class RoadGenerator
         Vector3 road = new Vector3(point2.x - point1.x, point2.y - point1.y, point2.z - point1.z);
         Vector3 normal = new Vector3(road.z, 0, -road.x).normalized;
 
-        Vector3 point3 = point1 + sign * normal * width;
-        Vector3 point4 = point2 + sign * normal * width;
-
+        Vector3 vector = sign * normal * width;
+        Vector3 point3 = point1 + vector;
+        Vector3 point4 = point2 + vector;
+         
         line = new Line(point3, point4);
 
         return normal;
