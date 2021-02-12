@@ -31,10 +31,10 @@ public class Demonstration : MonoBehaviour
         Vector3[] points = new Vector3[]
     {
             new Vector3(-5f, 0f, -1f),
-            new Vector3(5f, 0f, 3f),
-            new Vector3(9f, 0f, 8f),
+            new Vector3(5f, 0f, -10f),
             new Vector3(13f, 0f, 3f),
-            new Vector3(17f, 0f, 3f),
+            new Vector3(14f, 0f, 3f),
+            new Vector3(-5f, 0f, -1f),
     };
 
         GameObject spherePoint1 = Instantiate(spherePrefab);

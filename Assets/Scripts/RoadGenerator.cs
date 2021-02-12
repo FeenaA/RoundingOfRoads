@@ -24,11 +24,20 @@ public class RoadGenerator
     private readonly List<int> _trianglesList = new List<int>();
     private readonly List<Vector3> _normalsList = new List<Vector3>();
 
+    //    int count = (int)(Mathf.Abs(angle) / maxAngle) + 1;
+
     /// <summary>
     /// создать и заполнить mesh
     /// </summary>
-    public Mesh GetMesh(Vector3[] points, float roadWidth)
+    public Mesh GetMesh(Vector3[] pointsInput, float roadWidth)
     {
+        float sqrMinDistance = 2 * radius + _roadWidth;
+        sqrMinDistance *= sqrMinDistance;
+
+        Vector3[] points = PreparePoints(pointsInput, sqrMinDistance);
+        // проверка, является ли дорога кольцом
+        bool isCycled = ArePointsClose(points[0], points[points.Length - 1], sqrMinDistance);
+
         _roadWidth = roadWidth;
         halfWidth = _roadWidth / 2f;
 
@@ -37,6 +46,7 @@ public class RoadGenerator
 
         int currentIndex = 0;
 
+        //if (!isCycled)
         {
             var point1 = points[0];
             var pointCentre = points[1];
@@ -73,8 +83,16 @@ public class RoadGenerator
             ChangeSystemNew2Old(point1, rot, currentVertex);
         }
 
+        // --- обработка "бублика"
+        // если точки совпадают, сделать ещё одну итерацию
+
+
+
+        // иначе - закрытие дороги
         // last section
         AddLastSection(points[iterationCount - 1], points[iterationCount], currentIndex);
+
+        // ---
 
         Mesh mesh = new Mesh
         {
@@ -84,6 +102,52 @@ public class RoadGenerator
         };
 
         return mesh;
+    }
+
+    /// <summary>
+    /// исключить из рассмотрения дублирующиеся точки, идущие подряд
+    /// </summary>
+    /// <param name="points"></param>
+    /// <returns></returns>
+    private Vector3[] PreparePoints(Vector3[] points, float sqrMinDistance)
+    {
+        List<Vector3> res = new List<Vector3>();
+        Vector3 currentPoint = points[0];
+
+        for (int i = 1; i < points.Length; i++)
+        {
+            // если точки расположены близко друг к другу, заменить их средней точкой
+            if (ArePointsClose(currentPoint, points[i], sqrMinDistance))
+            {
+                currentPoint = new Vector3(
+                    (currentPoint.x + points[i].x) / 2f,
+                    0f,
+                    (currentPoint.z + points[i].z) / 2f
+                    );
+            }
+            else
+            {
+                res.Add(currentPoint);
+                currentPoint = points[i];
+            }
+        }
+        res.Add(currentPoint);
+        return res.ToArray();
+    }
+
+    /// <summary>
+    /// Проверка на близость двух точек
+    /// </summary>
+    /// <param name="point1"></param>
+    /// <param name="point2"></param>
+    /// <param name="sqrDistance">Квадрат минимального расстояния между вершинами</param>
+    /// <returns></returns>
+    private bool ArePointsClose(Vector3 point1, Vector3 point2, float sqrDistance)
+    {
+        float deltaX = point1.x - point2.x;
+        float deltaZ = point1.z - point2.z;
+
+        return ((deltaX * deltaX + deltaZ * deltaZ) < sqrDistance);
     }
 
     /// <summary>
@@ -171,15 +235,15 @@ public class RoadGenerator
         float angleX = Vector3.Angle(Vector3.right, crossingPoint - roundnessPoint) - 90f;
 
         // построить скругленный участок
-        int currentCount = (angleX == 0) ? 0 : _count;        
-        
+        int currentCount = (angleX == 0) ? 0 : _count;
+
         for (int i = 0; i <= currentCount; i++)
         {
             if (directionSign > 0)
             {
                 _verticesList.Add(Rotate(radius, angleX + directionSign * i * deltaAngle, crossingPoint));
                 _verticesList.Add(Rotate(radius + _roadWidth, angleX + directionSign * i * deltaAngle, crossingPoint));
-            } 
+            }
             else
             {
                 _verticesList.Add(Rotate(radius + _roadWidth, angleX + directionSign * i * deltaAngle, crossingPoint));
