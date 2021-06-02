@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿#if UNITY_EDITOR
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -106,3 +107,4 @@ public class TabsBlock
         currentGuiMethod = methods[methods.Keys.ToArray()[index]];
     }
 }
+#endif
